@@ -5,7 +5,25 @@ const padManager = require('ep_etherpad-lite/node/db/PadManager');
 
 exports.expressCreateServer = (hookName, {app}, cb) => {
   app.get('/list', async (req, res) => {
-    const padIds = (await padManager.listAllPads()).padIDs;
+    const padIds = (await padManager.listAllPads()).padIDs.slice();
+    padIds.sort((a, b) => {
+     // match reasonable YYYY-MM-DD
+     const d = /^20[12][0-9]-[01][0-9]-[0123][0-9]$/;
+     const ad = d.test(a);
+     const bd = d.test(b);
+     if (ad || bd) {
+       if (ad && bd) {
+         // sort dates in reverse
+         return b.localeCompare(a);
+       } else {
+         // dates come before non-dates
+         return (+bd) - (+ad);
+       }
+     } else {
+       // sort non-dates normally
+       return a.localeCompare(b);
+     }
+    });
     res.send(eejs.require('ep_padlist2/templates/pads.html', {padIds}));
   });
   return cb();
